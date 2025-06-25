@@ -17,4 +17,3 @@ import redisClient from './utils/redis';
     console.log('Value of myKey after 6 seconds:', await redisClient.get('myKey')); // Should print null
   }, 6000);
 })();
-

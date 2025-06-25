@@ -47,4 +47,3 @@ class DBClient {
 // Export a singleton
 const dbClient = new DBClient();
 export default dbClient;
-
