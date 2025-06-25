@@ -1,57 +1,48 @@
+// utils/db.js
 import { MongoClient } from 'mongodb';
+import dotenv from 'dotenv';
 
-const DB_HOST = process.env.DB_HOST || 'localhost';
-const DB_PORT = process.env.DB_PORT || 27017;
-const DB_DATABASE = process.env.DB_DATABASE || 'files_manager';
+dotenv.config();
 
 class DBClient {
   constructor() {
-    this.uri = `mongodb://${DB_HOST}:${DB_PORT}/${DB_DATABASE}`;
-    this.client = new MongoClient(this.uri, { useNewUrlParser: true, useUnifiedTopology: true });
-    this.db = null;
+    const host = process.env.DB_HOST || 'localhost';
+    const port = process.env.DB_PORT || 27017;
+    const database = process.env.DB_DATABASE || 'files_manager';
+
+    const url = `mongodb://${host}:${port}`;
+    this.client = new MongoClient(url, { useUnifiedTopology: true });
+    this.dbName = database;
+
+    // start connection immediately (non-blocking)
+    this.client.connect()
+      .then(() => {
+        this.db = this.client.db(this.dbName);
+      })
+      .catch((err) => {
+        console.error('MongoDB connection error:', err.message);
+      });
   }
 
-  async isAlive() {
-    try {
-      await this.client.connect();
-      this.db = this.client.db(DB_DATABASE);
-      return true;
-    } catch (error) {
-      console.error('Error connecting to MongoDB:', error);
-      return false;
-    }
+  /**
+   * @returns {boolean} true if the driver reports a working connection
+   */
+  isAlive() {
+    return this.client && this.client.topology && this.client.topology.isConnected();
   }
 
+  /**
+   * @returns {Promise<number>} number of documents in 'users' collection
+   */
   async nbUsers() {
-    if (this.db) {
-      try {
-        const collection = this.db.collection('users');
-        const count = await collection.countDocuments();
-        return count;
-      } catch (error) {
-        console.error('Error fetching user count:', error);
-        return 0;
-      }
-    }
-    return 0;
+    return this.db ? this.db.collection('users').countDocuments() : 0;
   }
 
+  /**
+   * @returns {Promise<number>} number of documents in 'files' collection
+   */
   async nbFiles() {
-    if (this.db) {
-      try {
-        const collection = this.db.collection('files');
-        const count = await collection.countDocuments();
-        return count;
-      } catch (error) {
-        console.error('Error fetching file count:', error);
-        return 0;
-      }
-    }
-    return 0;
-  }
-
-  async closeConnection() {
-    await this.client.close();
+    return this.db ? this.db.collection('files').countDocuments() : 0;
   }
 }
 
