@@ -14,38 +14,39 @@ class DBClient {
     this.client = new MongoClient(url, { useUnifiedTopology: true });
     this.dbName = database;
 
-    // start connection immediately (non-blocking)
+    // Start connection immediately (non-blocking)
     this.client.connect()
       .then(() => {
         this.db = this.client.db(this.dbName);
       })
-      .catch((err) => {
-        console.error('MongoDB connection error:', err.message);
-      });
+      .catch((err) => console.error('MongoDB connection error:', err.message));
   }
 
   /**
-   * @returns {boolean} true if the driver reports a working connection
+   * @returns {boolean} true if the driver is connected
    */
   isAlive() {
-    return this.client && this.client.topology && this.client.topology.isConnected();
+    return this.client.topology && this.client.topology.isConnected();
   }
 
   /**
-   * @returns {Promise<number>} number of documents in 'users' collection
+   * @returns {Promise<number>} number of docs in 'users' collection
    */
   async nbUsers() {
-    return this.db ? this.db.collection('users').countDocuments() : 0;
+    if (!this.db) return 0;
+    return this.db.collection('users').countDocuments();
   }
 
   /**
-   * @returns {Promise<number>} number of documents in 'files' collection
+   * @returns {Promise<number>} number of docs in 'files' collection
    */
   async nbFiles() {
-    return this.db ? this.db.collection('files').countDocuments() : 0;
+    if (!this.db) return 0;
+    return this.db.collection('files').countDocuments();
   }
 }
 
+// Export a singleton
 const dbClient = new DBClient();
 export default dbClient;
 
