@@ -1,18 +1,17 @@
-// middlewares/authenticate.js
-/**
- * Lightweight helper used by several controllers.
- * It simply converts the X-Token header into the current Mongo user document
- * (or returns null when the token is missing / invalid).
- */
 import redisClient from '../utils/redis';
-import dbClient    from '../utils/db';
+import dbClient from '../utils/db';
 
-export const getUserFromXToken = async (token = '') => {
+/**
+ * Resolve a user document from the X-Token header.
+ * Returns the user document or null.
+ */
+export async function getUserFromToken(req) {
+  const token = req.header('X-Token');
   if (!token) return null;
 
-  const userId = await redisClient.get(`auth_${token}`);
-  if (!userId) return null;
+  const id = await redisClient.get(`auth_${token}`);
+  if (!id) return null;
 
-  return dbClient.usersCollection().findOne({ _id: dbClient.toObjectId(userId) });
-};
+  return dbClient.usersCollection().findOne({ _id: dbClient.toObjectId(id) });
+}
 
