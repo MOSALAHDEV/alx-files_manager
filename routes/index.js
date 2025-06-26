@@ -16,9 +16,7 @@ router.get('/connect', AuthController.getConnect);
 router.get('/disconnect', AuthController.getDisconnect);
 
 router.post('/files', FilesController.postUpload);
-
-// New routes for publishing and unpublishing files
-router.put('/files/:id/publish', FilesController.putPublish);
-router.put('/files/:id/unpublish', FilesController.putUnpublish);
+router.get('/files/:id/data', FilesController.getFile); // New endpoint for getting file data
+router.get('/files', FilesController.getIndex);
 
 export default router;
