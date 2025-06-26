@@ -1,67 +1,51 @@
 // utils/db.js
-import { MongoClient } from 'mongodb';
+import { MongoClient, ObjectId } from 'mongodb';
 
-/**
- * Lightweight Mongo DB helper (singleton)
- *  – handles the first connection asynchronously
- *  – exposes helpers to check liveness and grab collections
- */
 class DBClient {
   constructor() {
-    // Connection settings (env → fallback to defaults)
     const host = process.env.DB_HOST || 'localhost';
     const port = process.env.DB_PORT || 27017;
-    const database = process.env.DB_DATABASE || 'files_manager';
+    const dbName = process.env.DB_DATABASE || 'files_manager';
 
-    // Mongo URI & driver
-    const uri = `mongodb://${host}:${port}`;
-    this.client = new MongoClient(uri, { useUnifiedTopology: true });
+    const url = `mongodb://${host}:${port}`;
+    this.client = new MongoClient(url, { useUnifiedTopology: true });
 
-    // internal flags
-    this.db = null; // populated once connected
-    this.connected = false; // quick boolean check
-    // Promise that resolves once the first connection succeeds
-    this.ready = this.client.connect()
-      .then(() => {
-        this.db = this.client.db(database);
-        this.connected = true;
-      })
-      .catch((err) => console.error('MongoDB connection error:', err.message));
+    this.client.connect()
+      .then(() => { this.db = this.client.db(dbName); })
+      .catch((err) => console.error('MongoDB error:', err.message));
   }
 
-  /** @returns {boolean} true once the driver is connected  */
+  /* ---------- generic helpers ---------- */
+
   isAlive() {
-    return this.connected;
+    return this.client && this.client.topology && this.client.topology.isConnected();
   }
 
-  /** await until the initial connection is done */
-  async waitUntilConnected() {
-    await this.ready;
+  usersCollection() { return this.db.collection('users'); }
+  filesCollection() { return this.db.collection('files'); }
+
+  async nbUsers() { return this.usersCollection().countDocuments(); }
+  async nbFiles() { return this.filesCollection().countDocuments(); }
+
+  toObjectId(id) {
+    try { return new ObjectId(id); } catch (e) { return null; }
   }
 
-  /** users collection helper (null while connecting) */
-  usersCollection() {
-    return this.connected ? this.db.collection('users') : null;
+  /* ---------- helpers for File controller ---------- */
+
+  async getFileById(id) {
+    const _id = this.toObjectId(id);
+    if (!_id) return null;
+    return this.filesCollection().findOne({ _id });
   }
 
-  /** files collection helper (null while connecting) */
-  filesCollection() {
-    return this.connected ? this.db.collection('files') : null;
-  }
-
-  /** nb of users */
-  async nbUsers() {
-    if (!this.connected) return 0;
-    return this.usersCollection().countDocuments();
-  }
-
-  /** nb of files */
-  async nbFiles() {
-    if (!this.connected) return 0;
-    return this.filesCollection().countDocuments();
+  async getFileByIdAndUserId(id, userId) {
+    const _id = this.toObjectId(id);
+    if (!_id) return null;
+    return this.filesCollection().findOne({ _id, userId });
   }
 }
 
-/* export singleton */
 const dbClient = new DBClient();
 export default dbClient;
+
